@@ -191,8 +191,10 @@ function App() {
           productData
         );
         alert(res.data.message);
+        closeModal();
+        getProduct();
       } catch (err) {
-        console.log(err);
+        alert(err.response.data.message);
       }
     } else if (modalType === "edit") {
       try {
@@ -211,12 +213,12 @@ function App() {
           productData
         );
         alert(res.data.message);
+        closeModal();
+        getProduct();
       } catch (err) {
-        console.log(err);
+        alert(err.response.data.message);
       }
     }
-    closeModal();
-    getProduct();
   }
 
   // 刪除產品資訊
@@ -279,7 +281,7 @@ function App() {
                           <button
                             type="button"
                             className="btn btn-outline-primary btn-sm"
-                            onClick={() => openModal(product)}
+                            onClick={() => openModal(product, "edit")}
                           >
                             編輯
                           </button>
