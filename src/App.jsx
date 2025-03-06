@@ -4,18 +4,12 @@ import axios from 'axios'
 import * as bootstrap from 'bootstrap'
 import 'bootstrap/dist/css/bootstrap.min.css'
 
-import Pagination from './components/Pagination'
-import Modal from './components/Modal'
+// import Pagination from './components/Pagination'
 
 const API_BASE = 'https://ec-course-api.hexschool.io/v2'
 const API_PATH = 'galactic_whispers'
 
 function App() {
-  const [formData, setFormData] = useState({
-    username: '',
-    password: '',
-  })
-  const [isAuth, setIsAuth] = useState(false)
   const [products, setProducts] = useState([])
   const [templateData, setTemplateData] = useState({
     id: '',
@@ -30,17 +24,13 @@ function App() {
     imageUrl: '',
     imagesUrl: [],
   })
-  const [pagination, setPagination] = useState({})
-  const [modalType, setModalType] = useState('')
+  const [carts, setCarts] = useState([])
+  const [total, setTotal] = useState(0)
+  const [finalTotal, setFinalTotal] = useState(0)
+
   const productModalRef = useRef(null)
 
   useEffect(() => {
-    const token = document.cookie.replace(
-      /(?:(?:^|.*;\s*)hexToken\s*=\s*([^;]*).*$)|^.*$/,
-      '$1'
-    )
-    axios.defaults.headers.common.Authorization = token
-
     productModalRef.current = new bootstrap.Modal('#productModal', {
       keyboard: false,
     })
@@ -53,51 +43,36 @@ function App() {
         }
       })
 
-    checkAdmin()
+    getProduct()
+    getCart()
   }, [])
 
-  // 檢查是否已登入
-  async function checkAdmin() {
+  // 取得產品資訊
+  async function getProduct() {
     try {
-      await axios.post(`${API_BASE}/api/user/check`)
-      setIsAuth(true)
-      getProduct()
+      const res = await axios.get(`${API_BASE}/api/${API_PATH}/products`)
+      // console.log(res)
+      setProducts(res.data.products)
     } catch (err) {
       console.log(err)
     }
   }
 
-  // 登入頁面輸入框處理
-  function handleInput(e) {
-    const { id, value } = e.target
-
-    setFormData({
-      ...formData,
-      [id]: value,
-    })
-  }
-
-  // 驗證登入帳密
-  async function handleSubmit(e) {
-    e.preventDefault()
-
+  // 取得購物車資訊
+  async function getCart() {
     try {
-      const res = await axios.post(`${API_BASE}/admin/signin`, formData)
-      const { token, expired } = res.data
-
-      document.cookie = `hexToken=${token};expires=${new Date(expired)};`
-      axios.defaults.headers.common.Authorization = `${token}`
-
-      setIsAuth(true)
-      getProduct()
+      const res = await axios.get(`${API_BASE}/api/${API_PATH}/cart`)
+      console.log(res)
+      setCarts(res.data.data.carts)
+      setTotal(res.data.data.total)
+      setFinalTotal(res.data.data.final_total)
     } catch (err) {
-      console.error(err)
-      alert('使用者信箱或密碼有誤!')
+      console.log(err)
     }
   }
 
   // 打開modal
-  function openModal(product, type) {
+  function openModal(product) {
     setTemplateData({
       id: product.id || '',
       imageUrl: product.imageUrl || '',
@@ -112,261 +87,286 @@ function App() {
       imagesUrl: product.imagesUrl || [],
     })
 
-    setModalType(type)
     productModalRef.current.show()
   }
+
   // 關閉modal
   function closeModal() {
     productModalRef.current.hide()
   }
 
-  // modal頁面輸入框處理
-  function handleModalInput(e) {
-    const { id, value, type, checked } = e.target
-    setTemplateData((prevData) => {
-      return {
-        ...prevData,
-        [id]: type === 'checkbox' ? checked : value,
-      }
-    })
-  }
-
-  function handleImageChange(index, value) {
-    setTemplateData((prevData) => {
-      const newImages = [...prevData.imagesUrl]
-      newImages[index] = value
-
-      if (
-        value !== '' &&
-        index === newImages.length - 1 &&
-        newImages.length < 5
-      ) {
-        newImages.push('')
-      }
-
-      if (newImages.length > 1 && newImages[newImages.length - 1] === '') {
-        newImages.pop()
-      }
-
-      return { ...prevData, imagesUrl: newImages }
-    })
-  }
-
-  function handleAddImage() {
-    setTemplateData((prevData) => ({
-      ...prevData,
-      imagesUrl: [...prevData.imagesUrl, ''],
-    }))
-  }
-
-  function handleRemoveImage() {
-    setTemplateData((prevData) => {
-      const newImages = [...prevData.imagesUrl]
-      newImages.pop()
-      return { ...prevData, imagesUrl: newImages }
-    })
-  }
-
-  // 取得產品資訊
-  async function getProduct(page = 1) {
+  // 加入購物車
+  async function addToCart(id, qty) {
     try {
-      const res = await axios.get(
-        `${API_BASE}/api/${API_PATH}/admin/products?page=${page}`
-      )
-      setProducts(res.data.products)
-      setPagination(res.data.pagination)
-      // console.log(res.data.pagination);
+      const res = await axios.post(`${API_BASE}/api/${API_PATH}/cart`, {
+        data: { product_id: id, qty },
+      })
+      console.log(res)
     } catch (err) {
       console.log(err)
     }
-  }
-
-  // 新增、修改產品資訊
-  async function updateProduct() {
-    if (modalType === 'add') {
-      try {
-        const productData = {
-          data: {
-            ...templateData,
-            origin_price: Number(templateData.origin_price),
-            price: Number(templateData.price),
-            is_enabled: templateData.is_enabled ? 1 : 0,
-          },
-        }
-        // console.log(productData);
-
-        const res = await axios.post(
-          `${API_BASE}/api/${API_PATH}/admin/product`,
-          productData
-        )
-        alert(res.data.message)
-        closeModal()
-        getProduct()
-      } catch (err) {
-        alert(err.response.data.message)
-      }
-    } else if (modalType === 'edit') {
-      try {
-        const productData = {
-          data: {
-            ...templateData,
-            origin_price: Number(templateData.origin_price),
-            price: Number(templateData.price),
-            is_enabled: templateData.is_enabled ? 1 : 0,
-          },
-        }
-        // console.log(productData);
-
-        const res = await axios.put(
-          `${API_BASE}/api/${API_PATH}/admin/product/${templateData.id}`,
-          productData
-        )
-        alert(res.data.message)
-        closeModal()
-        getProduct()
-      } catch (err) {
-        alert(err.response.data.message)
-      }
-    }
-  }
-
-  // 刪除產品資訊
-  async function deleteProduct(productId) {
-    try {
-      console.log(productId)
-
-      const res = await axios.delete(
-        `${API_BASE}/api/${API_PATH}/admin/product/${productId}`
-      )
-      alert(res.data.message)
-    } catch (err) {
-      console.log(err)
-    }
-    closeModal()
-    getProduct()
   }
 
   return (
     <>
-      {isAuth ? (
-        <div>
-          <div className='container'>
-            <div className='text-end mt-4'>
-              <button
-                className='btn btn-primary'
-                onClick={() => openModal({}, 'add')}
-              >
-                建立新的產品
-              </button>
+      <div id='app'>
+        <div className='container'>
+          <div className='mt-4'>
+            {/* 產品Modal */}
+            <div
+              id='productModal'
+              className='modal fade'
+              tabindex='-1'
+              role='dialog'
+              aria-labelledby='exampleModalLabel'
+              aria-hidden='true'
+              ref={productModalRef}
+            >
+              <div className='modal-dialog modal-xl' role='document'>
+                <div className='modal-content border-0'>
+                  <div className='modal-header bg-dark text-white'>
+                    <h5 className='modal-title' id='exampleModalLabel'>
+                      <span>{templateData.title}</span>
+                    </h5>
+                    <button
+                      type='button'
+                      className='btn-close'
+                      data-bs-dismiss='modal'
+                      aria-label='Close'
+                      onClick={closeModal}
+                    ></button>
+                  </div>
+                  <div className='modal-body'>
+                    <div className='row'>
+                      <div className='col-sm-6'>
+                        <img
+                          className='img-fluid'
+                          src={templateData.imageUrl}
+                          alt='主圖'
+                        />
+                      </div>
+                      <div className='col-sm-6'>
+                        <span className='badge bg-primary rounded-pill'>
+                          {templateData.category}
+                        </span>
+                        <p>商品描述：{templateData.description}</p>
+                        <p>商品內容：{templateData.content}</p>
+                        <del className='h6'>
+                          原價：{templateData.origin_price} 元
+                        </del>
+                        <div className='h5'>特價：{templateData.price} 元</div>
+                        <div>
+                          <div className='input-group'>
+                            <input
+                              type='number'
+                              className='form-control'
+                              min='1'
+                              v-model='qty'
+                            />
+                            <button
+                              type='button'
+                              className='btn btn-primary'
+
+                              // onClick.prevent="addToCart(templateData.id, qty)"
+                            >
+                              加入購物車
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
-            <table className='table mt-4'>
+            {/* 產品Modal */}
+            {/* 產品列表 */}
+            <table className='table align-middle'>
               <thead>
                 <tr>
-                  <th width='120'>分類</th>
-                  <th>產品名稱</th>
-                  <th width='120'>原價</th>
-                  <th width='120'>售價</th>
-                  <th width='100'>是否啟用</th>
-                  <th width='120'>編輯</th>
+                  <th>圖片</th>
+                  <th>商品名稱</th>
+                  <th>價格</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
-                {products && products.length > 0 ? (
-                  products.map((product) => (
+                {products.map((product) => {
+                  return (
                     <tr key={product.id}>
-                      <td>{product.category}</td>
+                      <td style={{ width: '200px' }}>
+                        <div
+                          style={{
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                          }}
+                        >
+                          <img
+                            src={product.imageUrl}
+                            alt='主圖'
+                            className='img-fluid'
+                          />
+                        </div>
+                      </td>
                       <td>{product.title}</td>
-                      <td className='text-end'>{product.origin_price}</td>
-                      <td className='text-end'>{product.price}</td>
                       <td>
-                        {product.is_enabled ? (
-                          <span className='text-success'>啟用</span>
-                        ) : (
-                          <span>未啟用</span>
-                        )}
+                        <del className='h6'>原價：{product.origin_price}</del>
+                        <div className='h5'>特價：{product.price}</div>
                       </td>
                       <td>
-                        <div className='btn-group'>
+                        <div className='btn-group btn-group-sm'>
                           <button
                             type='button'
-                            className='btn btn-outline-primary btn-sm'
-                            onClick={() => openModal(product, 'edit')}
+                            className='btn btn-outline-secondary'
+                            onClick={() => openModal(product)}
                           >
-                            編輯
+                            <i className='fas fa-spinner fa-pulse'></i>
+                            查看更多
                           </button>
                           <button
                             type='button'
-                            className='btn btn-outline-danger btn-sm'
-                            onClick={() => deleteProduct(product.id)}
+                            className='btn btn-outline-danger'
+                            onClick={() => {
+                              addToCart(product.id, 1)
+                            }}
                           >
-                            刪除
+                            <i className='fas fa-spinner fa-pulse'></i>
+                            加到購物車
                           </button>
                         </div>
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan='5'>尚無產品資料</td>
-                  </tr>
-                )}
+                  )
+                })}
               </tbody>
             </table>
-            <Pagination pagination={pagination} changePage={getProduct} />
-          </div>
-        </div>
-      ) : (
-        <div className='container login'>
-          <div className='row justify-content-center'>
-            <h1 className='h3 mb-3 font-weight-normal'>請先登入</h1>
-            <div className='col-8'>
-              <form id='form' className='form-signin' onSubmit={handleSubmit}>
-                <div className='form-floating mb-3'>
-                  <input
-                    type='email'
-                    className='form-control'
-                    id='username'
-                    placeholder='name@example.com'
-                    value={formData.username}
-                    onChange={handleInput}
-                    required
-                    autoFocus
-                  />
-                  <label htmlFor='username'>Email address</label>
-                </div>
-                <div className='form-floating'>
-                  <input
-                    type='password'
-                    className='form-control'
-                    id='password'
-                    placeholder='Password'
-                    value={formData.password}
-                    onChange={handleInput}
-                    required
-                  />
-                  <label htmlFor='password'>Password</label>
-                </div>
-                <button
-                  className='btn btn-lg btn-primary w-100 mt-3'
-                  type='submit'
-                >
-                  登入
-                </button>
-              </form>
+            {/* 產品列表 */}
+            {/* 購物車列表 */}
+            <div className='text-end'>
+              <button className='btn btn-outline-danger' type='button'>
+                清空購物車
+              </button>
             </div>
+            <table className='table align-middle'>
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>品名</th>
+                  <th style={{ width: '150px' }}>數量/單位</th>
+                  <th>單價</th>
+                </tr>
+              </thead>
+              <tbody>
+                {carts.map((cart) => {
+                  return (
+                    <tr key={cart.product.id}>
+                      <td>
+                        <button className='btn btn-outline-danger btn-sm'>
+                          <i className='fas fa-trash-alt'> X </i>
+                        </button>
+                      </td>
+                      <td>{cart.product.title}</td>
+                      <td>
+                        {cart.qty} {cart.product.unit}
+                      </td>
+                      <td>{cart.product.price}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colSpan='3' className='text-end'>
+                    總計
+                  </td>
+                  <td className='text-end'>{total}</td>
+                </tr>
+                <tr>
+                  <td colSpan='3' className='text-end text-success'>
+                    折扣價
+                  </td>
+                  <td className='text-end text-success'>{finalTotal}</td>
+                </tr>
+              </tfoot>
+            </table>
+            {/* 購物車列表 */}
           </div>
-          <p className='mt-5 mb-3 text-muted'>&copy; 2024~∞ - 六角學院</p>
+          {/* 結帳表單 */}
+          <div className='my-5 row justify-content-center'>
+            <form className='col-md-6'>
+              <div className='mb-3'>
+                <label htmlFor='email' className='form-label'>
+                  Email
+                </label>
+                <input
+                  id='email'
+                  name='email'
+                  type='email'
+                  className='form-control'
+                  placeholder='請輸入 Email'
+                />
+              </div>
+
+              <div className='mb-3'>
+                <label htmlFor='name' className='form-label'>
+                  收件人姓名
+                </label>
+                <input
+                  id='name'
+                  name='姓名'
+                  type='text'
+                  className='form-control'
+                  placeholder='請輸入姓名'
+                />
+              </div>
+
+              <div className='mb-3'>
+                <label htmlFor='tel' className='form-label'>
+                  收件人電話
+                </label>
+                <input
+                  id='tel'
+                  name='電話'
+                  type='text'
+                  className='form-control'
+                  placeholder='請輸入電話'
+                />
+              </div>
+
+              <div className='mb-3'>
+                <label htmlFor='address' className='form-label'>
+                  收件人地址
+                </label>
+                <input
+                  id='address'
+                  name='地址'
+                  type='text'
+                  className='form-control'
+                  placeholder='請輸入地址'
+                />
+              </div>
+
+              <div className='mb-3'>
+                <label htmlFor='message' className='form-label'>
+                  留言
+                </label>
+                <textarea
+                  id='message'
+                  className='form-control'
+                  cols='30'
+                  rows='10'
+                ></textarea>
+              </div>
+              <div className='text-end'>
+                <button type='submit' className='btn btn-danger'>
+                  送出訂單
+                </button>
+              </div>
+            </form>
+          </div>
+          {/* 結帳表單 */}
         </div>
-      )}
-      <Modal
-        templateData={templateData}
-        handleModalInput={handleModalInput}
-        handleImageChange={handleImageChange}
-        handleAddImage={handleAddImage}
-        handleRemoveImage={handleRemoveImage}
-        updateProduct={updateProduct}
-        closeModal={closeModal}
-      />
+      </div>
     </>
   )
 }

@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 
 import * as bootstrap from 'bootstrap'
 
-function Modal({
+function PostProductModal({
   templateData,
   handleModalInput,
   handleImageChange,
@@ -12,17 +12,17 @@ function Modal({
   updateProduct,
   closeModal,
 }) {
-  const productModalRef = useRef(null)
+  const postProductModalRef = useRef(null)
 
   return (
     <>
       <div
-        id='productModal'
+        id='postProductModal'
         className='modal fade'
         tabIndex='-1'
         aria-labelledby='productModalLabel'
         aria-hidden='true'
-        ref={productModalRef}
+        ref={postProductModalRef}
       >
         <div className='modal-dialog modal-xl'>
           <div className='modal-content border-0'>
@@ -248,7 +248,7 @@ function Modal({
   )
 }
 
-Modal.propTypes = {
+PostProductModal.propTypes = {
   templateData: PropTypes.shape({
     id: PropTypes.string,
     imageUrl: PropTypes.string,
@@ -270,4 +270,4 @@ Modal.propTypes = {
   closeModal: PropTypes.func.isRequired,
 }
 
-export default Modal
+export default PostProductModal
