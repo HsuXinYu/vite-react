@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
+import { useForm } from 'react-hook-form'
 
 import * as bootstrap from 'bootstrap'
 import 'bootstrap/dist/css/bootstrap.min.css'
-
-// import Pagination from './components/Pagination'
+import ReactLoading from 'react-loading'
 
 const API_BASE = 'https://ec-course-api.hexschool.io/v2'
 const API_PATH = 'galactic_whispers'
@@ -28,8 +28,16 @@ function App() {
   const [carts, setCarts] = useState([])
   const [total, setTotal] = useState(0)
   const [finalTotal, setFinalTotal] = useState(0)
+  const [isLoading, setIsLoading] = useState(false)
 
   const productModalRef = useRef(null)
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm({ mode: 'onBlur' })
 
   useEffect(() => {
     productModalRef.current = new bootstrap.Modal('#productModal', {
@@ -109,7 +117,7 @@ function App() {
   async function deleteAllCartItem() {
     try {
       const res = await axios.delete(`${API_BASE}/api/${API_PATH}/carts`)
-      console.log(res)
+      // console.log(res)
       alert(res.data.message)
       getCart()
     } catch (err) {
@@ -120,8 +128,7 @@ function App() {
 
   // 調整購物車數量
   async function updateCartItemQty(cartId, productId, qty) {
-    console.log(cartId, productId, qty)
-
+    // console.log(cartId, productId, qty)
     try {
       const res = await axios.put(
         `${API_BASE}/api/${API_PATH}/cart/${cartId}`,
@@ -135,6 +142,29 @@ function App() {
     } catch (err) {
       console.log(err)
       alert('更新購物車失敗')
+    }
+  }
+
+  //  提交結帳表單
+  async function onSubmit(formData) {
+    console.log(formData)
+    try {
+      const res = await axios.post(`${API_BASE}/api/${API_PATH}/order`, {
+        data: {
+          user: {
+            name: formData.name,
+            email: formData.email,
+            tel: formData.tel,
+            address: formData.address,
+          },
+          message: formData.message,
+        },
+      })
+      alert(res.data.message)
+      reset()
+    } catch {
+      // console.log(err)
+      alert('結帳失敗')
     }
   }
 
@@ -171,7 +201,7 @@ function App() {
             <div
               id='productModal'
               className='modal fade'
-              tabindex='-1'
+              tabIndex='-1'
               role='dialog'
               aria-labelledby='exampleModalLabel'
               aria-hidden='true'
@@ -298,7 +328,7 @@ function App() {
                             }}
                           >
                             <i className='fas fa-spinner fa-pulse'></i>
-                            加到購物車
+                            加入購物車
                           </button>
                         </div>
                       </td>
@@ -400,20 +430,35 @@ function App() {
           </div>
           {/* 結帳表單 */}
           <div className='my-5 row justify-content-center'>
-            <form className='col-md-6'>
+            <form
+              className='col-md-6'
+              action=''
+              onSubmit={handleSubmit(onSubmit)}
+            >
               <div className='mb-3'>
                 <label htmlFor='email' className='form-label'>
                   Email
                 </label>
                 <input
                   id='email'
-                  name='email'
+                  name='Email'
                   type='email'
-                  className='form-control'
+                  className={`form-control ${errors.email && 'is-invalid'}`}
                   placeholder='請輸入 Email'
+                  {...register('email', {
+                    required: { value: true, message: 'Email 欄位為必填' },
+                    pattern: {
+                      value: /^\S+@\S+$/i,
+                      message: 'Email 格式不正確',
+                    },
+                  })}
                 />
+                {errors.email && (
+                  <div className='invalid-feedback'>
+                    {errors?.email?.message}
+                  </div>
+                )}
               </div>
-
               <div className='mb-3'>
                 <label htmlFor='name' className='form-label'>
                   收件人姓名
@@ -422,11 +467,18 @@ function App() {
                   id='name'
                   name='姓名'
                   type='text'
-                  className='form-control'
+                  className={`form-control ${errors.name && 'is-invalid'}`}
                   placeholder='請輸入姓名'
+                  {...register('name', {
+                    required: { value: true, message: '姓名 欄位為必填' },
+                  })}
                 />
+                {errors.name && (
+                  <div className='invalid-feedback'>
+                    {errors?.name?.message}
+                  </div>
+                )}
               </div>
-
               <div className='mb-3'>
                 <label htmlFor='tel' className='form-label'>
                   收件人電話
@@ -434,12 +486,21 @@ function App() {
                 <input
                   id='tel'
                   name='電話'
-                  type='text'
-                  className='form-control'
+                  type='tel'
+                  className={`form-control ${errors.tel && 'is-invalid'}`}
                   placeholder='請輸入電話'
+                  {...register('tel', {
+                    required: { value: true, message: '電話 欄位為必填' },
+                    pattern: {
+                      value: /^(0[2-8]\d{7,8}|09\d{8})$/,
+                      message: '電話 格式不正確',
+                    },
+                  })}
                 />
+                {errors.tel && (
+                  <div className='invalid-feedback'>{errors?.tel?.message}</div>
+                )}
               </div>
-
               <div className='mb-3'>
                 <label htmlFor='address' className='form-label'>
                   收件人地址
@@ -448,11 +509,18 @@ function App() {
                   id='address'
                   name='地址'
                   type='text'
-                  className='form-control'
+                  className={`form-control ${errors.address && 'is-invalid'}`}
                   placeholder='請輸入地址'
+                  {...register('address', {
+                    required: { value: true, message: '地址 欄位為必填' },
+                  })}
                 />
+                {errors.address && (
+                  <div className='invalid-feedback'>
+                    {errors?.address?.message}
+                  </div>
+                )}
               </div>
-
               <div className='mb-3'>
                 <label htmlFor='message' className='form-label'>
                   留言
@@ -462,10 +530,15 @@ function App() {
                   className='form-control'
                   cols='30'
                   rows='10'
+                  {...register('message')}
                 ></textarea>
               </div>
               <div className='text-end'>
-                <button type='submit' className='btn btn-danger'>
+                <button
+                  type='submit'
+                  className='btn btn-danger'
+                  {...(carts.length === 0 ? { disabled: true } : {})}
+                >
                   送出訂單
                 </button>
               </div>
