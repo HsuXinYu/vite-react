@@ -28,7 +28,7 @@ function App() {
   const [carts, setCarts] = useState([])
   const [total, setTotal] = useState(0)
   const [finalTotal, setFinalTotal] = useState(0)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(0)
 
   const productModalRef = useRef(null)
 
@@ -83,6 +83,7 @@ function App() {
   // 加入購物車
   async function addToCart(productId, qty) {
     // console.log(typeof qty, qty)
+    setIsLoading(1)
     try {
       const res = await axios.post(`${API_BASE}/api/${API_PATH}/cart`, {
         data: { product_id: productId, qty },
@@ -91,6 +92,7 @@ function App() {
       alert(res.data.message)
       setQty(1)
       closeModal()
+      setIsLoading(0)
       getCart()
     } catch (err) {
       console.log(err)
@@ -266,7 +268,16 @@ function App() {
                                 addToCart(templateData.id, qty)
                               }}
                             >
-                              加入購物車
+                              {isLoading === 1 ? (
+                                <ReactLoading
+                                  type='spin'
+                                  color='blue'
+                                  height={20}
+                                  width={20}
+                                />
+                              ) : (
+                                '加入購物車'
+                              )}
                             </button>
                           </div>
                         </div>
@@ -328,7 +339,18 @@ function App() {
                             }}
                           >
                             <i className='fas fa-spinner fa-pulse'></i>
-                            加入購物車
+                            <span>
+                              {isLoading === 1 ? (
+                                <ReactLoading
+                                  type='spin'
+                                  color='red'
+                                  height={20}
+                                  width={20}
+                                />
+                              ) : (
+                                '加入購物車'
+                              )}
+                            </span>
                           </button>
                         </div>
                       </td>
