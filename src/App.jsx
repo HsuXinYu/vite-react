@@ -24,6 +24,7 @@ function App() {
     imageUrl: '',
     imagesUrl: [],
   })
+  const [qty, setQty] = useState(1)
   const [carts, setCarts] = useState([])
   const [total, setTotal] = useState(0)
   const [finalTotal, setFinalTotal] = useState(0)
@@ -62,12 +63,78 @@ function App() {
   async function getCart() {
     try {
       const res = await axios.get(`${API_BASE}/api/${API_PATH}/cart`)
-      console.log(res)
+      // console.log(res)
       setCarts(res.data.data.carts)
       setTotal(res.data.data.total)
       setFinalTotal(res.data.data.final_total)
     } catch (err) {
       console.log(err)
+    }
+  }
+
+  // 加入購物車
+  async function addToCart(productId, qty) {
+    // console.log(typeof qty, qty)
+    try {
+      const res = await axios.post(`${API_BASE}/api/${API_PATH}/cart`, {
+        data: { product_id: productId, qty },
+      })
+      // console.log(res)
+      alert(res.data.message)
+      setQty(1)
+      closeModal()
+      getCart()
+    } catch (err) {
+      console.log(err)
+      alert('加入購物車失敗')
+    }
+  }
+
+  // 刪除購物車單一品項
+  async function deleteCartItem(cartId) {
+    try {
+      const res = await axios.delete(
+        `${API_BASE}/api/${API_PATH}/cart/${cartId}`
+      )
+      // console.log(res)
+      alert(res.data.message)
+      getCart()
+    } catch (err) {
+      console.log(err)
+      alert('刪除購物車失敗')
+    }
+  }
+
+  // 刪除購物車所有品項
+  async function deleteAllCartItem() {
+    try {
+      const res = await axios.delete(`${API_BASE}/api/${API_PATH}/carts`)
+      console.log(res)
+      alert(res.data.message)
+      getCart()
+    } catch (err) {
+      console.log(err)
+      alert('刪除購物車失敗')
+    }
+  }
+
+  // 調整購物車數量
+  async function updateCartItemQty(cartId, productId, qty) {
+    console.log(cartId, productId, qty)
+
+    try {
+      const res = await axios.put(
+        `${API_BASE}/api/${API_PATH}/cart/${cartId}`,
+        {
+          data: { product_id: productId, qty },
+        }
+      )
+      // console.log(res)
+      alert(res.data.message)
+      getCart()
+    } catch (err) {
+      console.log(err)
+      alert('更新購物車失敗')
     }
   }
 
@@ -93,18 +160,6 @@ function App() {
   // 關閉modal
   function closeModal() {
     productModalRef.current.hide()
-  }
-
-  // 加入購物車
-  async function addToCart(id, qty) {
-    try {
-      const res = await axios.post(`${API_BASE}/api/${API_PATH}/cart`, {
-        data: { product_id: id, qty },
-      })
-      console.log(res)
-    } catch (err) {
-      console.log(err)
-    }
   }
 
   return (
@@ -157,17 +212,29 @@ function App() {
                         <div className='h5'>特價：{templateData.price} 元</div>
                         <div>
                           <div className='input-group'>
-                            <input
-                              type='number'
+                            <select
                               className='form-control'
-                              min='1'
-                              v-model='qty'
-                            />
+                              name='qty'
+                              id='qty'
+                              value={qty}
+                              onChange={(e) => {
+                                setQty(Number(e.target.value))
+                              }}
+                            >
+                              {[...Array(10).keys()].map((item) => {
+                                return (
+                                  <option key={item} value={item + 1}>
+                                    {item + 1}
+                                  </option>
+                                )
+                              })}
+                            </select>
                             <button
                               type='button'
                               className='btn btn-primary'
-
-                              // onClick.prevent="addToCart(templateData.id, qty)"
+                              onClick={() => {
+                                addToCart(templateData.id, qty)
+                              }}
                             >
                               加入購物車
                             </button>
@@ -242,53 +309,93 @@ function App() {
             </table>
             {/* 產品列表 */}
             {/* 購物車列表 */}
-            <div className='text-end'>
-              <button className='btn btn-outline-danger' type='button'>
-                清空購物車
-              </button>
-            </div>
-            <table className='table align-middle'>
-              <thead>
-                <tr>
-                  <th></th>
-                  <th>品名</th>
-                  <th style={{ width: '150px' }}>數量/單位</th>
-                  <th>單價</th>
-                </tr>
-              </thead>
-              <tbody>
-                {carts.map((cart) => {
-                  return (
-                    <tr key={cart.product.id}>
-                      <td>
-                        <button className='btn btn-outline-danger btn-sm'>
-                          <i className='fas fa-trash-alt'> X </i>
-                        </button>
-                      </td>
-                      <td>{cart.product.title}</td>
-                      <td>
-                        {cart.qty} {cart.product.unit}
-                      </td>
-                      <td>{cart.product.price}</td>
+            {carts.length > 0 && (
+              <>
+                <div className='text-end'>
+                  <button
+                    className='btn btn-outline-danger'
+                    type='button'
+                    onClick={deleteAllCartItem}
+                  >
+                    清空購物車
+                  </button>
+                </div>
+                <table className='table align-middle'>
+                  <thead>
+                    <tr>
+                      <th></th>
+                      <th>品名</th>
+                      <th style={{ width: '150px' }}>數量/單位</th>
+                      <th>單價</th>
                     </tr>
-                  )
-                })}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td colSpan='3' className='text-end'>
-                    總計
-                  </td>
-                  <td className='text-end'>{total}</td>
-                </tr>
-                <tr>
-                  <td colSpan='3' className='text-end text-success'>
-                    折扣價
-                  </td>
-                  <td className='text-end text-success'>{finalTotal}</td>
-                </tr>
-              </tfoot>
-            </table>
+                  </thead>
+                  <tbody>
+                    {carts.map((cart) => {
+                      return (
+                        <tr key={cart.product.id}>
+                          <td>
+                            <button
+                              type='button'
+                              className='btn btn-outline-danger btn-sm'
+                              onClick={() => deleteCartItem(cart.id)}
+                            >
+                              <i className='fas fa-trash-alt'> X </i>
+                            </button>
+                          </td>
+                          <td>{cart.product.title}</td>
+                          <td>
+                            <button
+                              type='button'
+                              className='btn btn-outline-dark btn-sm'
+                              onClick={() =>
+                                updateCartItemQty(
+                                  cart.id,
+                                  cart.product.id,
+                                  cart.qty - 1
+                                )
+                              }
+                              {...(cart.qty === 1 ? { disabled: true } : {})}
+                            >
+                              <i className='fas fa-trash-alt'> - </i>
+                            </button>
+                            <span style={{ margin: '10px' }}>{cart.qty}</span>
+                            <button
+                              type='button'
+                              className='btn btn-outline-dark btn-sm'
+                              onClick={() =>
+                                updateCartItemQty(
+                                  cart.id,
+                                  cart.product.id,
+                                  cart.qty + 1
+                                )
+                              }
+                            >
+                              <i className='fas fa-trash-alt'> + </i>
+                            </button>
+                            <span className='btn'> {cart.product.unit} </span>
+                          </td>
+                          <td>{cart.product.price}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan='3' className='text-end'>
+                        總計
+                      </td>
+                      <td className='text-end'>{total}</td>
+                    </tr>
+                    <tr>
+                      <td colSpan='3' className='text-end text-success'>
+                        折扣價
+                      </td>
+                      <td className='text-end text-success'>{finalTotal}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </>
+            )}
             {/* 購物車列表 */}
           </div>
           {/* 結帳表單 */}
