@@ -147,7 +147,7 @@ function App() {
     }
   }
 
-  //  提交結帳表單
+  // 提交結帳表單
   async function onSubmit(formData) {
     console.log(formData)
     try {
@@ -163,7 +163,7 @@ function App() {
         },
       })
       alert(res.data.message)
-      deleteAllCartItem()
+      getCart()
       reset()
     } catch {
       // console.log(err)

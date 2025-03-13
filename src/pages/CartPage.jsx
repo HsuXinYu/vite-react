@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
+import { useForm } from 'react-hook-form'
 
 const API_BASE = import.meta.env.VITE_API_BASE
 const API_PATH = import.meta.env.VITE_API_PATH
@@ -9,8 +10,14 @@ function Cart() {
   const [total, setTotal] = useState(0)
   const [finalTotal, setFinalTotal] = useState(0)
 
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm({ mode: 'onBlur' })
+
   useEffect(() => {
-    console.log('Cart')
     getCart()
   }, [])
 
@@ -18,7 +25,6 @@ function Cart() {
   async function getCart() {
     try {
       const res = await axios.get(`${API_BASE}/api/${API_PATH}/cart`)
-      console.log(res)
       setCarts(res.data.data.carts)
       setTotal(res.data.data.total)
       setFinalTotal(res.data.data.final_total)
@@ -71,6 +77,30 @@ function Cart() {
     } catch (err) {
       console.log(err)
       alert('更新購物車失敗')
+    }
+  }
+
+  // 提交結帳表單
+  async function onSubmit(formData) {
+    console.log(formData)
+    try {
+      const res = await axios.post(`${API_BASE}/api/${API_PATH}/order`, {
+        data: {
+          user: {
+            name: formData.name,
+            email: formData.email,
+            tel: formData.tel,
+            address: formData.address,
+          },
+          message: formData.message,
+        },
+      })
+      alert(res.data.message)
+      getCart()
+      reset()
+    } catch {
+      // console.log(err)
+      alert('結帳失敗')
     }
   }
 
@@ -169,6 +199,123 @@ function Cart() {
             <h3>購物車是空的</h3>
           )}
           {/* 購物車列表 */}
+          {/* 結帳表單 */}
+          <div className='my-5 row justify-content-center'>
+            <form
+              className='col-md-6'
+              action=''
+              onSubmit={handleSubmit(onSubmit)}
+            >
+              <div className='mb-3'>
+                <label htmlFor='email' className='form-label'>
+                  Email
+                </label>
+                <input
+                  id='email'
+                  name='Email'
+                  type='email'
+                  className={`form-control ${errors.email && 'is-invalid'}`}
+                  placeholder='請輸入 Email'
+                  {...register('email', {
+                    required: { value: true, message: 'Email 欄位為必填' },
+                    pattern: {
+                      value: /^\S+@\S+$/i,
+                      message: 'Email 格式不正確',
+                    },
+                  })}
+                />
+                {errors.email && (
+                  <div className='invalid-feedback'>
+                    {errors?.email?.message}
+                  </div>
+                )}
+              </div>
+              <div className='mb-3'>
+                <label htmlFor='name' className='form-label'>
+                  收件人姓名
+                </label>
+                <input
+                  id='name'
+                  name='姓名'
+                  type='text'
+                  className={`form-control ${errors.name && 'is-invalid'}`}
+                  placeholder='請輸入姓名'
+                  {...register('name', {
+                    required: { value: true, message: '姓名 欄位為必填' },
+                  })}
+                />
+                {errors.name && (
+                  <div className='invalid-feedback'>
+                    {errors?.name?.message}
+                  </div>
+                )}
+              </div>
+              <div className='mb-3'>
+                <label htmlFor='tel' className='form-label'>
+                  收件人電話
+                </label>
+                <input
+                  id='tel'
+                  name='電話'
+                  type='tel'
+                  className={`form-control ${errors.tel && 'is-invalid'}`}
+                  placeholder='請輸入電話'
+                  {...register('tel', {
+                    required: { value: true, message: '電話 欄位為必填' },
+                    pattern: {
+                      value: /^(0[2-8]\d{7,8}|09\d{8})$/,
+                      message: '電話 格式不正確',
+                    },
+                  })}
+                />
+                {errors.tel && (
+                  <div className='invalid-feedback'>{errors?.tel?.message}</div>
+                )}
+              </div>
+              <div className='mb-3'>
+                <label htmlFor='address' className='form-label'>
+                  收件人地址
+                </label>
+                <input
+                  id='address'
+                  name='地址'
+                  type='text'
+                  className={`form-control ${errors.address && 'is-invalid'}`}
+                  placeholder='請輸入地址'
+                  {...register('address', {
+                    required: { value: true, message: '地址 欄位為必填' },
+                  })}
+                />
+                {errors.address && (
+                  <div className='invalid-feedback'>
+                    {errors?.address?.message}
+                  </div>
+                )}
+              </div>
+              <div className='mb-3'>
+                <label htmlFor='message' className='form-label'>
+                  留言
+                </label>
+                <textarea
+                  id='message'
+                  className='form-control'
+                  cols='30'
+                  rows='10'
+                  {...register('message')}
+                ></textarea>
+              </div>
+              <div className='text-end'>
+                <button
+                  type='submit'
+                  className='btn btn-danger'
+                  {...(carts.length === 0 ? { disabled: true } : {})}
+                >
+                  送出訂單
+                </button>
+              </div>
+            </form>
+          </div>
+          {/* 結帳表單 */}
         </div>
       </div>
     </>
