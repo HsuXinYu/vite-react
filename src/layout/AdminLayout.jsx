@@ -6,16 +6,10 @@ function FrontendLayout() {
       <header>
         <nav className='mt-5'>
           <Link className='h4 mt-5 mx-2' to='/'>
-            首頁
+            回到首頁
           </Link>
-          <Link className='h4 mt-5 mx-2' to='/product'>
+          <Link className='h4 mt-5 mx-2' to='/admin/product'>
             產品頁面
-          </Link>
-          <Link className='h4 mt-5 mx-2' to='/cart'>
-            購物車頁面
-          </Link>
-          <Link className='h4 mt-5 mx-2' to='/login'>
-            登入頁面
           </Link>
         </nav>
       </header>
